@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # created 2017/03/12-14 by tassaron
 # updated 2017/03/17-18
 import argparse
@@ -292,6 +293,7 @@ def main():
     PWD = arg['dir']
 
     window = MainWindow()
+    window.set_icon_from_file("%s/wrench.png" % SRCPATH)
     window.connect("delete-event", Gtk.main_quit)
     window.show_all()
 
