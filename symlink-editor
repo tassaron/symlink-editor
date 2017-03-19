@@ -25,6 +25,7 @@ class MainWindow(Gtk.Window):
         self.rows=[]
         self.SHOWFOLDERS=False
         self.SHOWHIDDEN=False
+        self.closeme=False
 
         # make navigation widgets
         self.filepathText = Gtk.Entry()
@@ -72,7 +73,6 @@ class MainWindow(Gtk.Window):
         # then the file listing widgets
         self.filetree = Gtk.ListBox()
         self.filetree.set_activate_on_single_click=False
-        self.updateFileListing()
         self.filetree.connect("row-selected", self.selectFile)
         self.filetree.connect("row-activated", self.navigate)
         # make a scrolledwindow for the filetree in case it's long
@@ -193,11 +193,18 @@ class MainWindow(Gtk.Window):
                 self.updateFileListing()
             window.destroy()
 
-    def editAction(self, widget=None, row=None):
-        if self.selectedRow != -1:
+    def editAction(self, widget=None, row=None, **kwargs):
+        selectedLink = (False, False)
+        if 'path' in kwargs.keys():
+            selectedLink = kwargs['path']
+        elif self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
-        if self.selectedRow != -1 and selectedLink[0]!=False and selectedLink[1]!=False:
+        if selectedLink[0]!=False and selectedLink[1]!=False:
+            # selectedLink is false when the selected row is:
+            # 1) a message row, 2) a folder row, 3) no row is selected
             editWindow = Gtk.Dialog(title="Edit")
+            if self.closeme:
+                editWindow.connect('destroy', killme)
             editWindow.set_border_width(10)
             editWindow.set_modal(True) # block the main window until this dialog is dismissed
             editWindow.add_buttons("Apply", Gtk.ResponseType.APPLY, "Cancel", Gtk.ResponseType.CANCEL)
@@ -231,8 +238,8 @@ class MainWindow(Gtk.Window):
                     oopsWindow.show_all()
                     oopsWindow.run()
                     oopsWindow.destroy()
-            self.updateFileListing()
             editWindow.destroy()
+            self.updateFileListing()
 
     def newAction(self, widget=None):
         window = Gtk.Dialog(title="Create new symlink")
@@ -255,7 +262,7 @@ class MainWindow(Gtk.Window):
         if reply == Gtk.ResponseType.OK and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
             # TODO: confirm overwrite
             os.symlink(targetEntry.get_text(), '%s/%s' % (PWD, titleEntry.get_text()))
-            self.updateFileListing()
+        self.updateFileListing()
         window.destroy()
 
     def deleteAction(self, widget):
@@ -276,11 +283,17 @@ class MainWindow(Gtk.Window):
             window.destroy()
 
     def getRowIndexByLabel(self, labelToCompare):
+        # orphan code :(
         for row in self.filetree.get_children():
             labels = [label for label in row.get_children()]
             for label in labels:
                 if labelToCompare in label.get_text():
                     return row.get_index()
+
+def killme(*args):
+    # can't seem to find a better way to kill this program...
+    # the answer is probably using Gtk.Application but I can't be arsed today
+    call('pid=$(ps -ef | grep "%s" | grep -v grep | awk \'{print $2}\') && kill "$pid"' % os.path.realpath(__file__),shell=True)
 
 def main():
     global PWD
@@ -289,28 +302,36 @@ def main():
     parser.add_argument('path-to-edit', help='open an edit dialog for this path', nargs='?')
     parser.add_argument('-new', help='open a dialog to create a new link', action='store_true')
     parser.add_argument('-dir', help='start in this path instead of the default\n(doesn\'t work if a file is specified)', default='%s/Bookmarks' % os.getenv("HOME"))
+    parser.add_argument('-leaveopen', help='leave main window open after editing', action='store_true')
     arg = vars(parser.parse_args()) # return arguments as a dictionary
     PWD = arg['dir']
 
     window = MainWindow()
     window.set_icon_from_file("%s/wrench.png" % SRCPATH)
     window.connect("delete-event", Gtk.main_quit)
-    window.show_all()
 
-    if arg['new']:
-        window.newAction()
-    elif arg['path-to-edit']:
+    if arg['path-to-edit'] and not arg['leaveopen']:
+        window.closeme=True
+        window.hide()
+    else:
+        window.show_all()
+
+    if arg['path-to-edit']:
         PWD = os.path.dirname(arg['path-to-edit'])
         window.filepathText.set_text(os.path.dirname(arg['path-to-edit']))
+        if os.path.islink(arg['path-to-edit']):
+            window.editAction(path=(os.path.basename(arg['path-to-edit']), os.readlink(arg['path-to-edit'])))
+        else:
+            # you mistyped the command or path is not a symlink; show main window instead
+            window.closeme=False; window.show_all()
+            window.updateFileListing()
+    elif arg['new']:
+        window.newAction()
+    else:
         window.updateFileListing()
-        try:
-            window.selectedRow = window.getRowIndexByLabel(os.path.basename(arg['path-to-edit']))
-            window.editAction()
-        except:
-            # oh well
-            pass
 
     Gtk.main()
 
 if __name__ == "__main__":
     main()
+
