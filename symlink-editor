@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # created 2017/03/12-14 by tassaron
-# updated 2017/03/17-18
+# updated 2017/03/17-19
 import argparse
 import os
 from subprocess import call
@@ -27,68 +27,10 @@ class MainWindow(Gtk.Window):
         self.SHOWHIDDEN=False
         self.closeme=False
 
-        # make navigation widgets
-        self.filepathText = Gtk.Entry()
-        self.filepathText.set_icon_from_icon_name(Gtk.PositionType.LEFT, 'folder')
-        self.filepathText.set_icon_tooltip_text(Gtk.PositionType.LEFT, 'Go up one directory')
-        self.filepathText.connect('icon-press', self.goUpDirectory)
-        self.filepathText.set_width_chars(40)
-        self.filepathText.set_text(PWD)
-        self.filepathText.connect('activate', self.changeDirectory)
-        goButton = Gtk.Button(label="Go")
-        goButton.connect("clicked", self.changeDirectory)
-        navBox = Gtk.Box()
-        navBox.pack_start(self.filepathText, False, False, 0)
-        navBox.pack_start(goButton, False, False, 0)
-
-        # make action button widgets
-        wrenchIcon = Gtk.Image(); wrenchIcon.set_from_file("%s/wrench.png" % SRCPATH)
-        notepadIcon = Gtk.Image(); notepadIcon.set_from_file("%s/notepad.png" % SRCPATH)
-        minusIcon = Gtk.Image(); minusIcon.set_from_file("%s/minus.png" % SRCPATH)
-        plusIcon = Gtk.Image(); plusIcon.set_from_file("%s/plus.png" % SRCPATH)
-        self.actionButton1 = Gtk.Button(label="Edit")
-        self.actionButton1.set_image(wrenchIcon)
-        self.actionButton1.connect("clicked", self.editAction)
-        self.actionButton1b = Gtk.Button(label="Copy")
-        self.actionButton1b.set_image(notepadIcon)
-        self.actionButton1b.connect("clicked", self.copyAction)
-        self.actionButton2 = Gtk.Button(label="New")
-        self.actionButton2.set_image(plusIcon)
-        self.actionButton2.connect("clicked", self.newAction)
-        self.actionButton3 = Gtk.Button(label="Delete")
-        self.actionButton3.set_image(minusIcon)
-        self.actionButton3.connect("clicked", self.deleteAction)
-        self.actionButton4 = Gtk.CheckButton()
-        self.actionButton4.connect("toggled",self.toggleShowFolders)
-        # attach paramaters are: col, row, wide, tall
-        self.actionButtonBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.actionButtonBox.pack_start(self.actionButton1, False, False, 0)
-        self.actionButtonBox.pack_start(self.actionButton1b, False, False, 0)
-        self.actionButtonBox.pack_start(self.actionButton2, False, False, 0)
-        self.actionButtonBox.pack_start(self.actionButton3, False, False, 0)
-        box = Gtk.Box(); box.add(Gtk.Label("Show folders"))
-        box.pack_start(self.actionButton4, False, False, 0)
-        self.actionButtonBox.pack_start(box, False, False, 0)
-
-        # then the file listing widgets
-        self.filetree = Gtk.ListBox()
-        self.filetree.set_activate_on_single_click=False
-        self.filetree.connect("row-selected", self.selectFile)
-        self.filetree.connect("row-activated", self.navigate)
-        # make a scrolledwindow for the filetree in case it's long
-        filetreeWindow = Gtk.ScrolledWindow()
-        filetreeWindow.set_border_width(10)
-        filetreeWindow.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        filetreeWindow.add_with_viewport(self.filetree)
-        filetreeWindow.set_size_request(375, 300)
-
-        # place all the freaking widgets
-        emptyBox = Gtk.Box(); self.bodyGrid.add(emptyBox)
-        self.bodyGrid.attach(self.actionButtonBox, 0, 1, 1, 1) # action buttons
-        self.bodyGrid.attach(navBox, 1, 0, 1, 1) # col, row, width, height
-        self.bodyGrid.attach_next_to(filetreeWindow, navBox, Gtk.PositionType.BOTTOM, 1, 1)
+        # do the rest in show_all() in case we never wanna show this window...
 
     def updateFileListing(self):
+        print 'updatefilelisting'
         # dirname of the '/' root directory causes errors, so this hack fixes them
         global PWD
         if PWD.startswith('//'):
@@ -103,13 +45,15 @@ class MainWindow(Gtk.Window):
             # woohoo list comprehensions!
             symlinks = [ifile for ifile in allFiles if os.path.islink("%s/%s" % (PWD, ifile))]
             if self.SHOWFOLDERS == True:
-                directories = [ifile for ifile in allFiles if os.path.isdir("%s/%s" % (PWD, ifile))]
-                directories_ = list(directories) # temp working copy for iteration
-                # remove symlinked directories and hidden folders
                 if self.SHOWHIDDEN:
-                    directories = [directory for directory in directories_ if directory not in symlinks]
+                    directories = [ifile for ifile in allFiles \
+                                    if os.path.isdir("%s/%s" % (PWD, ifile)) and \
+                                    not os.path.islink("%s/%s" % (PWD, ifile))]
                 else:
-                    directories = [directory for directory in directories_ if directory not in symlinks and not directory.startswith(".")]
+                    directories = [ifile for ifile in allFiles \
+                                    if os.path.isdir("%s/%s" % (PWD, ifile)) and \
+                                    not os.path.islink("%s/%s" % (PWD, ifile)) and \
+                                    not ifile.startswith(".")]
                 for ifile in sorted(directories):
                     self.rows.append( [ifile, False] )
                     newRow = Gtk.ListBoxRow(); rowBody = Gtk.Box()
@@ -131,7 +75,7 @@ class MainWindow(Gtk.Window):
         except OSError:
             self.filetree.add(Gtk.Label("File doesn't exist (check permissions?)"))
             self.rows.append( [False, False] )
-        self.show_all()
+        self.show_all(recreate=False)
 
     def changeDirectory(self, widget):
         global PWD; PWD = self.filepathText.get_text()
@@ -222,13 +166,15 @@ class MainWindow(Gtk.Window):
             reply = editWindow.run()
             if reply == Gtk.ResponseType.APPLY:
                 try:
-                    if linkTarget.get_text() != selectedLink[1]:
+                    linkTargetText = linkTarget.get_text()
+                    linkTitleText = linkTitle.get_text()
+                    if linkTargetText != selectedLink[1]:
                         # if target changed, use 'os.symlink'
                         os.remove('%s/%s' % (PWD, selectedLink[0]))
-                        os.symlink(linkTarget.get_text(), '%s/%s' % (PWD, linkTitle.get_text()))
-                    elif linkTitle.get_text() != selectedLink[0]:
+                        os.symlink(linkTargetText, '%s/%s' % (PWD, linkTitleText))
+                    elif linkTitleText != selectedLink[0]:
                         # otherwise just title change can be accomplished via os.rename
-                        os.rename('%s/%s' % (PWD, selectedLink[0]), '%s/%s' % (PWD, linkTitle.get_text()))
+                        os.rename('%s/%s' % (PWD, selectedLink[0]), '%s/%s' % (PWD, linkTitleText))
                 except OSError:
                     oopsWindow = Gtk.Dialog(title="Oops")
                     oopsWindow.set_modal(True)
@@ -290,10 +236,78 @@ class MainWindow(Gtk.Window):
                 if labelToCompare in label.get_text():
                     return row.get_index()
 
+    def show_all(self, recreate=True):
+        if recreate:
+            # first finish creating the mainwindow
+            # make navigation widgets
+            self.filepathText = Gtk.Entry()
+            self.filepathText.set_icon_from_icon_name(Gtk.PositionType.LEFT, 'folder')
+            self.filepathText.set_icon_tooltip_text(Gtk.PositionType.LEFT, 'Go up one directory')
+            self.filepathText.connect('icon-press', self.goUpDirectory)
+            self.filepathText.set_width_chars(40)
+            self.filepathText.set_text(PWD)
+            self.filepathText.connect('activate', self.changeDirectory)
+            goButton = Gtk.Button(label="Go")
+            goButton.connect("clicked", self.changeDirectory)
+            navBox = Gtk.Box()
+            navBox.pack_start(self.filepathText, False, False, 0)
+            navBox.pack_start(goButton, False, False, 0)
+
+            # make action button widgets
+            wrenchIcon = Gtk.Image(); wrenchIcon.set_from_file("%s/wrench.png" % SRCPATH)
+            notepadIcon = Gtk.Image(); notepadIcon.set_from_file("%s/notepad.png" % SRCPATH)
+            minusIcon = Gtk.Image(); minusIcon.set_from_file("%s/minus.png" % SRCPATH)
+            plusIcon = Gtk.Image(); plusIcon.set_from_file("%s/plus.png" % SRCPATH)
+            self.actionButton1 = Gtk.Button(label="Edit")
+            self.actionButton1.set_image(wrenchIcon)
+            self.actionButton1.connect("clicked", self.editAction)
+            self.actionButton1b = Gtk.Button(label="Copy")
+            self.actionButton1b.set_image(notepadIcon)
+            self.actionButton1b.connect("clicked", self.copyAction)
+            self.actionButton2 = Gtk.Button(label="New")
+            self.actionButton2.set_image(plusIcon)
+            self.actionButton2.connect("clicked", self.newAction)
+            self.actionButton3 = Gtk.Button(label="Delete")
+            self.actionButton3.set_image(minusIcon)
+            self.actionButton3.connect("clicked", self.deleteAction)
+            self.actionButton4 = Gtk.CheckButton()
+            self.actionButton4.connect("toggled",self.toggleShowFolders)
+            # attach paramaters are: col, row, wide, tall
+            self.actionButtonBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            self.actionButtonBox.pack_start(self.actionButton1, False, False, 0)
+            self.actionButtonBox.pack_start(self.actionButton1b, False, False, 0)
+            self.actionButtonBox.pack_start(self.actionButton2, False, False, 0)
+            self.actionButtonBox.pack_start(self.actionButton3, False, False, 0)
+            box = Gtk.Box(); box.add(Gtk.Label("Show folders"))
+            box.pack_start(self.actionButton4, False, False, 0)
+            self.actionButtonBox.pack_start(box, False, False, 0)
+
+            # then the file listing widgets
+            self.filetree = Gtk.ListBox()
+            self.filetree.set_activate_on_single_click=False
+            self.filetree.connect("row-selected", self.selectFile)
+            self.filetree.connect("row-activated", self.navigate)
+            # make a scrolledwindow for the filetree in case it's long
+            filetreeWindow = Gtk.ScrolledWindow()
+            filetreeWindow.set_border_width(10)
+            filetreeWindow.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+            filetreeWindow.add_with_viewport(self.filetree)
+            filetreeWindow.set_size_request(375, 300)
+
+            # place all the freaking widgets
+            emptyBox = Gtk.Box(); self.bodyGrid.add(emptyBox)
+            self.bodyGrid.attach(self.actionButtonBox, 0, 1, 1, 1) # action buttons
+            self.bodyGrid.attach(navBox, 1, 0, 1, 1) # col, row, width, height
+            self.bodyGrid.attach_next_to(filetreeWindow, navBox, Gtk.PositionType.BOTTOM, 1, 1)
+        else:
+            # now call dad's method
+            Gtk.Window.show_all(self)
+
 def killme(*args):
     # can't seem to find a better way to kill this program...
     # the answer is probably using Gtk.Application but I can't be arsed today
-    call('pid=$(ps -ef | grep "%s" | grep -v grep | awk \'{print $2}\') && kill "$pid"' % os.path.realpath(__file__),shell=True)
+    call('pid=$(ps -ef | grep "%s" | grep -v grep | awk \'{print $2}\') && kill "$pid"' \
+        % os.path.realpath(__file__),shell=True)
 
 def main():
     global PWD
@@ -318,7 +332,8 @@ def main():
 
     if arg['path-to-edit']:
         PWD = os.path.dirname(arg['path-to-edit'])
-        window.filepathText.set_text(os.path.dirname(arg['path-to-edit']))
+        if arg['leaveopen']:
+            window.filepathText.set_text(os.path.dirname(arg['path-to-edit']))
         if os.path.islink(arg['path-to-edit']):
             window.editAction(path=(os.path.basename(arg['path-to-edit']), os.readlink(arg['path-to-edit'])))
         else:
