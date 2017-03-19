@@ -281,7 +281,8 @@ class MainWindow(Gtk.Window):
                 if labelToCompare in label.get_text():
                     return row.get_index()
 
-if __name__ == "__main__":
+def main():
+    global PWD
     # first parse command line arguments
     parser = argparse.ArgumentParser(description='graphically manage symbolic links')
     parser.add_argument('path-to-edit', help='open an edit dialog for this path', nargs='?')
@@ -291,7 +292,6 @@ if __name__ == "__main__":
     PWD = arg['dir']
 
     window = MainWindow()
-    window.set_icon_from_file("%s/wrench.png" % SRCPATH)
     window.connect("delete-event", Gtk.main_quit)
     window.show_all()
 
@@ -309,3 +309,6 @@ if __name__ == "__main__":
             pass
 
     Gtk.main()
+
+if __name__ == "__main__":
+    main()
