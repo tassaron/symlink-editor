@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Symlink Editor
+Exec=/home/brianna/magic/symlink-editor
+Icon=/home/brianna/magic/symlink-editor-src/wrench.png
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Utility;

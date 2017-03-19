@@ -88,6 +88,11 @@ class MainWindow(Gtk.Window):
         self.bodyGrid.attach_next_to(filetreeWindow, navBox, Gtk.PositionType.BOTTOM, 1, 1)
 
     def updateFileListing(self):
+        # dirname of the '/' root directory causes errors, so this hack fixes them
+        global PWD
+        if PWD.startswith('//'):
+            PWD = PWD[1:]
+            self.filepathText.set_text(PWD)
         # empty the old contents of filetree
         for row in self.filetree:
             self.filetree.remove(row)
@@ -249,7 +254,8 @@ class MainWindow(Gtk.Window):
         if reply == Gtk.ResponseType.OK and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
             # TODO: confirm overwrite
             os.symlink(targetEntry.get_text(), '%s/%s' % (PWD, titleEntry.get_text()))
-            self.updateFileListing()
+            self.updateFileL
+            isting()
         window.destroy()
 
     def deleteAction(self, widget):
@@ -279,9 +285,9 @@ class MainWindow(Gtk.Window):
 if __name__ == "__main__":
     # first parse command line arguments
     parser = argparse.ArgumentParser(description='graphically manage symbolic links')
-    parser.add_argument('-dir', help='start in this path instead of the default', default='%s/Bookmarks' % os.getenv("HOME"))
-    parser.add_argument('-edit', help='open an edit dialog for this path', default='None')
+    parser.add_argument('path-to-edit', help='open an edit dialog for this path', nargs='?')
     parser.add_argument('-new', help='open a dialog to create a new link', action='store_true')
+    parser.add_argument('-dir', help='start in this path instead of the default\n(doesn\'t work if a file is specified)', default='%s/Bookmarks' % os.getenv("HOME"))
     arg = vars(parser.parse_args()) # return arguments as a dictionary
     PWD = arg['dir']
 
@@ -292,12 +298,12 @@ if __name__ == "__main__":
 
     if arg['new']:
         window.newAction()
-    elif arg['edit']!='None':
-        PWD = os.path.dirname(arg['edit'])
-        window.filepathText.set_text(os.path.dirname(arg['edit']))
+    elif arg['path-to-edit']:
+        PWD = os.path.dirname(arg['path-to-edit'])
+        window.filepathText.set_text(os.path.dirname(arg['path-to-edit']))
         window.updateFileListing()
         try:
-            window.selectedRow = window.getRowIndexByLabel(os.path.basename(arg['edit']))
+            window.selectedRow = window.getRowIndexByLabel(os.path.basename(arg['path-to-edit']))
             window.editAction()
         except:
             # oh well
