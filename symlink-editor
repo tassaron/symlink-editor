@@ -30,7 +30,6 @@ class MainWindow(Gtk.Window):
         # do the rest in show_all() in case we never wanna show this window...
 
     def updateFileListing(self):
-        print 'updatefilelisting'
         # dirname of the '/' root directory causes errors, so this hack fixes them
         global PWD
         if PWD.startswith('//'):
@@ -227,7 +226,7 @@ class MainWindow(Gtk.Window):
                 os.remove('%s/%s' % (PWD, selectedLink[0]))
                 self.updateFileListing()
             window.destroy()
-
+    '''
     def getRowIndexByLabel(self, labelToCompare):
         # orphan code :(
         for row in self.filetree.get_children():
@@ -235,7 +234,7 @@ class MainWindow(Gtk.Window):
             for label in labels:
                 if labelToCompare in label.get_text():
                     return row.get_index()
-
+    '''
     def show_all(self, recreate=True):
         if recreate:
             # first finish creating the mainwindow
@@ -306,7 +305,7 @@ class MainWindow(Gtk.Window):
 def killme(*args):
     # can't seem to find a better way to kill this program...
     # the answer is probably using Gtk.Application but I can't be arsed today
-    call('pid=$(ps -ef | grep "%s" | grep -v grep | awk \'{print $2}\') && kill "$pid"' \
+    call('pid=$(ps -ef | grep "%s" | grep -v grep | grep -v geany | awk \'{print $2}\') && kill "$pid"' \
         % os.path.realpath(__file__),shell=True)
 
 def main():
