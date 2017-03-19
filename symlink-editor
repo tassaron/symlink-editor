@@ -254,8 +254,7 @@ class MainWindow(Gtk.Window):
         if reply == Gtk.ResponseType.OK and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
             # TODO: confirm overwrite
             os.symlink(targetEntry.get_text(), '%s/%s' % (PWD, titleEntry.get_text()))
-            self.updateFileL
-            isting()
+            self.updateFileListing()
         window.destroy()
 
     def deleteAction(self, widget):
