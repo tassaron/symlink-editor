@@ -339,19 +339,25 @@ def killme(*args):
     # can't seem to find a better way to kill this program...
     # the answer is probably using Gtk.Application but I can't be arsed today
     # so maybe TODO: fix this ugly hack...
-    call('pid=$(ps -ef | grep "%s" | grep -v grep | grep -v geany | awk \'{print $2}\') && kill "$pid"' \
+    call('pid=$(ps -ef | grep "%s" | grep -v grep | grep -v geany |\
+        awk \'{print $2}\') && for i in pid; do kill "$pid"; done' \
         % os.path.realpath(__file__),shell=True)
 
 def main():
     global PWD
+    HOME = os.getenv("HOME")
     # first parse command line arguments
     parser = argparse.ArgumentParser(description='graphically manage symbolic links')
     parser.add_argument('path-to-edit', help='open an edit dialog for this path', nargs='?')
     parser.add_argument('-new', help='open a dialog to create a new link', action='store_true')
-    parser.add_argument('-dir', help='start in this path instead of the default\n(doesn\'t work if a file is specified)', default='%s/Bookmarks' % os.getenv("HOME"))
+    parser.add_argument('-dir', help='start in this path instead of the default\n(doesn\'t work if a file is specified)', default='%s/Bookmarks' % HOME)
     parser.add_argument('-leaveopen', help='leave main window open after editing', action='store_true')
     arg = vars(parser.parse_args()) # return arguments as a dictionary
-    PWD = arg['dir']
+    if os.path.isdir('%s/Bookmarks' % HOME):
+        PWD = arg['dir']
+    else:
+        # most people don't have a Bookmarks folder like I do :p
+        PWD = HOME
 
     window = MainWindow()
     window.set_icon_from_file("%s/wrench.png" % SRCPATH)
@@ -364,16 +370,23 @@ def main():
         window.show_all()
 
     if arg['path-to-edit']:
-        PWD = os.path.dirname(arg['path-to-edit'])
+        if arg['path-to-edit'].startswith('/'):
+            # an absolute path
+            PWD = os.path.dirname(arg['path-to-edit'])
+        else:
+            # hopefully a relative path
+            PWD = os.getcwd()
         if arg['leaveopen']:
             window.filepathText.set_text(os.path.dirname(arg['path-to-edit']))
         if os.path.islink(arg['path-to-edit']):
             window.editAction(path=(os.path.basename(arg['path-to-edit']), os.readlink(arg['path-to-edit'])))
         else:
-            # you mistyped the command or path is not a symlink; show main window instead
-            # TODO: if a non-symlink is opened in edit mode, make a new link to it as target
+            # you mistyped the command or path is not a symlink; show the mainwindow after all!
             window.closeme=False; window.show_all()
             window.updateFileListing()
+        if os.path.exists(arg['path-to-edit']) and not arg['leaveopen']:
+            # if a non-symlink is opened, make a new link to it as target
+            window.newAction(target=arg['path-to-edit'])
     elif arg['new']:
         window.newAction()
     else:
