@@ -3,6 +3,7 @@ Symlink Editor
 *made by tassaron 2017-03-18*
 
 ![Screenshot](/screenshot.png?raw=true)
+![Screenshot](/screenshot2.png?raw=true)
 
 A GTK+ 3 app that helps you work with symbolic links on Linux.
 

@@ -9,6 +9,8 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
+HOME = os.getenv("HOME")
+DEFAULTPATH = '%s/Bookmarks' % HOME
 SRCPATH = ( "%s-src" % os.path.realpath(__file__))
 
 class MainWindow(Gtk.Window):
@@ -35,7 +37,6 @@ class MainWindow(Gtk.Window):
             self.filepathText.set_icon_from_icon_name(Gtk.PositionType.LEFT, 'folder')
             self.filepathText.set_icon_tooltip_text(Gtk.PositionType.LEFT, 'Go up one directory')
             self.filepathText.connect('icon-press', self.goUpDirectory)
-            self.filepathText.set_text(PWD)
             self.filepathText.connect('activate', self.changeDirectory)
             goButton = Gtk.Button(label="Go")
             goButton.connect("clicked", self.changeDirectory)
@@ -110,7 +111,7 @@ class MainWindow(Gtk.Window):
         global PWD
         if PWD.startswith('//'):
             PWD = PWD[1:]
-            self.filepathText.set_text(PWD)
+        self.filepathText.set_text(PWD)
         # empty the old contents of filetree
         for row in self.filetree:
             self.filetree.remove(row)
@@ -268,7 +269,7 @@ class MainWindow(Gtk.Window):
             self.updateFileListing()
 
     def linkToAction(self, widget):
-        window = Gtk.FileChooserDialog()
+        window = Gtk.FileChooserDialog("Choose something to link to...")
         window.set_current_folder(PWD)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
@@ -297,7 +298,7 @@ class MainWindow(Gtk.Window):
         targetEntryBox.pack_start(Gtk.Label("Target: "), False, False, 0)
         targetEntryBox.pack_start(targetEntry, True, True, 0)
         windowBody.pack_start(targetEntryBox, False, False, 0)
-        window.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
+        window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
         reply = window.run()
         if reply == Gtk.ResponseType.OK and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
@@ -345,19 +346,20 @@ def killme(*args):
 
 def main():
     global PWD
-    HOME = os.getenv("HOME")
     # first parse command line arguments
     parser = argparse.ArgumentParser(description='graphically manage symbolic links')
     parser.add_argument('path-to-edit', help='open an edit dialog for this path', nargs='?')
     parser.add_argument('-new', help='open a dialog to create a new link', action='store_true')
-    parser.add_argument('-dir', help='start in this path instead of the default\n(doesn\'t work if a file is specified)', default='%s/Bookmarks' % HOME)
+    parser.add_argument('-dir', help='start in this path instead of the default', default=DEFAULTPATH)
     parser.add_argument('-leaveopen', help='leave main window open after editing', action='store_true')
     arg = vars(parser.parse_args()) # return arguments as a dictionary
-    if os.path.isdir('%s/Bookmarks' % HOME):
+    if os.path.isdir(arg['dir']):
         PWD = arg['dir']
+    elif os.path.isdir(DEFAULTPATH):
+        PWD = DEFAULTPATH
     else:
-        # most people don't have a Bookmarks folder like I do :p
         PWD = HOME
+
 
     window = MainWindow()
     window.set_icon_from_file("%s/wrench.png" % SRCPATH)
@@ -376,8 +378,6 @@ def main():
         else:
             # hopefully a relative path
             PWD = os.getcwd()
-        if arg['leaveopen']:
-            window.filepathText.set_text(os.path.dirname(arg['path-to-edit']))
         if os.path.islink(arg['path-to-edit']):
             window.editAction(path=(os.path.basename(arg['path-to-edit']), os.readlink(arg['path-to-edit'])))
         else:
