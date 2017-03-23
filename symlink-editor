@@ -409,8 +409,11 @@ class MainWindow(Gtk.Window):
             window.set_modal(True)
             reply = window.run()
             if reply == Gtk.ResponseType.YES:
-                os.remove('%s/%s' % (PWD, selectedLink[0]))
-                self.updateFileListing()
+                try:
+                    os.remove('%s/%s' % (PWD, selectedLink[0]))
+                    self.updateFileListing()
+                except OSError:
+                    oopsWindow(OSERRORMSG)
             window.destroy()
 
 def openFm(*args):
