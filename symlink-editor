@@ -5,6 +5,7 @@
 # updated 2017/03/22
 import argparse
 import os
+import stat
 from subprocess import call
 import gi
 gi.require_version('Gtk', '3.0')
@@ -12,7 +13,8 @@ from gi.repository import Gtk
 
 HOME = os.getenv("HOME")
 DEFAULTPATH = '%s/Bookmarks' % HOME
-SRCPATH = ( "%s-src" % os.path.realpath(__file__))
+SRCPATH = "%s-src" % os.path.realpath(__file__)
+FOLDER = "%s/folder.png" % SRCPATH
 ENTRYWIDTH = 25
 OSERRORMSG =\
 '''Couldn't complete file operation.
@@ -142,49 +144,62 @@ class MainWindow(Gtk.Window):
             Gtk.Window.show_all(self)
 
     def updateFileListing(self):
-        # dirname of the '/' root directory causes errors, so this hack fixes them
         global PWD
-        if PWD.startswith('//'):
-            PWD = PWD[1:]
+        if PWD != os.path.realpath(PWD):
+            # this stops dirname of the root dir from duplicating
+            # AND stops user from using a path containing symlinks
+            PWD = os.path.realpath(PWD)
         self.filepathText.set_text(PWD)
         # empty the old contents of filetree
         for row in self.filetree:
             self.filetree.remove(row)
         self.rows = []
         try:
-            allFiles = os.listdir(PWD)
             # woohoo list comprehensions!
-            symlinks = [ifile for ifile in allFiles if os.path.islink("%s/%s" % (PWD, ifile))]
+            allFiles = [ifile for ifile in os.listdir(PWD)]
+            # list of file modes to ensure we use lstat() as little as needed
+            fileModes = [os.lstat('%s/%s' % (PWD, ifile)).st_mode for ifile in allFiles]
+            allFiles = list([ifile for i, ifile in enumerate(allFiles) if not stat.S_ISREG(fileModes[i])])
+            fileModes = list([ifile for ifile in fileModes if not stat.S_ISREG(ifile)])
+            print allFiles
             if self.SHOWFOLDERS == True:
+                # show folders if enabled
                 if self.SHOWHIDDEN:
-                    directories = [ifile for ifile in allFiles \
-                                    if os.path.isdir("%s/%s" % (PWD, ifile)) and \
-                                    not os.path.islink("%s/%s" % (PWD, ifile))]
+                    directories = [ifile for i, ifile in enumerate(allFiles) \
+                                    if stat.S_ISDIR(fileModes[i]) and \
+                                    not stat.S_ISLNK(fileModes[i])]
                 else:
-                    directories = [ifile for ifile in allFiles \
-                                    if os.path.isdir("%s/%s" % (PWD, ifile)) and \
-                                    not os.path.islink("%s/%s" % (PWD, ifile)) and \
+                    directories = [ifile for i, ifile in enumerate(allFiles) \
+                                    if stat.S_ISDIR(fileModes[i]) and \
+                                    not stat.S_ISLNK(fileModes[i]) and \
                                     not ifile.startswith(".")]
                 for ifile in sorted(directories):
                     self.rows.append( [ifile, False] )
                     newRow = Gtk.ListBoxRow(); rowBody = Gtk.Box()
                     folderIcon = Gtk.Image()
-                    folderIcon.set_from_file("%s/folder.png" % SRCPATH)
+                    folderIcon.set_from_file(FOLDER)
                     rowBody.pack_start(folderIcon, False, False, 0)
                     rowBody.pack_start(Gtk.Label(" %s" % ifile), False, False, 0)
                     newRow.add(rowBody)
                     self.filetree.add(newRow)
-            totalLinks = 0
+            # show symlinks
+            symlinks = [ifile for i, ifile in enumerate(allFiles) if stat.S_ISLNK(fileModes[i])]
             for ifile in sorted(symlinks):
-                totalLinks+=1
                 linkTarget = os.readlink("%s/%s" % (PWD, ifile))
                 self.rows.append( [ifile, linkTarget] )
                 newRow = Gtk.ListBoxRow(); rowBody = Gtk.Box()
                 label = Gtk.Label()
-                label.set_markup("<b>%s →</b> %s" % (ifile, linkTarget))
-                rowBody.add(label)
+                if os.path.exists(linkTarget) or os.path.exists('%s/%s' % (PWD, linkTarget)):
+                    label.set_markup("<b>%s →</b> %s" % (ifile, linkTarget))
+                else:
+                    # TODO: fix this so it knows when it fails due to permissions
+                    label.set_markup("<b>%s <span foreground='#dd0000'>→</span></b> %s" % (ifile, linkTarget))
+                    label.set_tooltip_text('Target invalid or wrong permissions')
+                rowBody.pack_start(label, False, False, 0)
                 newRow.add(rowBody)
                 self.filetree.add(newRow)
+            # if there are no folders this prevents the filetree being totally empty
+            totalLinks = len(symlinks)
             if totalLinks==0:
                 self.filetree.add(Gtk.Label("No links here :("))
                 self.rows.append( [False, False] )
@@ -459,5 +474,8 @@ def main():
     Gtk.main()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        quit()
 
