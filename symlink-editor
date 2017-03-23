@@ -161,7 +161,6 @@ class MainWindow(Gtk.Window):
             fileModes = [os.lstat('%s/%s' % (PWD, ifile)).st_mode for ifile in allFiles]
             allFiles = list([ifile for i, ifile in enumerate(allFiles) if not stat.S_ISREG(fileModes[i])])
             fileModes = list([ifile for ifile in fileModes if not stat.S_ISREG(ifile)])
-            print allFiles
             if self.SHOWFOLDERS == True:
                 # show folders if enabled
                 if self.SHOWHIDDEN:
