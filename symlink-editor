@@ -25,6 +25,7 @@ not exist.'''
 # combine all copy-pasted if statements into checkSelectedRow()?
 # fix row getting unselected after each action
 # make killme() unnecessary >.>
+# combine 'link to' and 'new' into one with a browse button
 
 class askWindow(Gtk.Dialog):
     def __init__(self, message):
@@ -94,9 +95,6 @@ class MainWindow(Gtk.Window):
             self.actionButton2.set_image(plusIcon)
             self.actionButton2.connect("clicked", self.newAction)
             plusIcon = Gtk.Image(); plusIcon.set_from_file("%s/plus.png" % SRCPATH)
-            self.actionButton2b = Gtk.Button(label="Link to…")
-            self.actionButton2b.set_image(plusIcon)
-            self.actionButton2b.connect("clicked", self.linkToAction)
             self.actionButton3 = Gtk.Button(label="Delete")
             self.actionButton3.set_image(minusIcon)
             self.actionButton3.connect("clicked", self.deleteAction)
@@ -105,10 +103,9 @@ class MainWindow(Gtk.Window):
             # attach paramaters are: col, row, wide, tall
             self.actionButtonBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             self.actionButtonBox.pack_start(self.actionButton1, False, False, 0)
-            self.actionButtonBox.pack_start(self.actionButton1c, False, False, 0)
             self.actionButtonBox.pack_start(self.actionButton1b, False, False, 0)
+            self.actionButtonBox.pack_start(self.actionButton1c, False, False, 0)
             self.actionButtonBox.pack_start(self.actionButton2, False, False, 0)
-            self.actionButtonBox.pack_start(self.actionButton2b, False, False, 0)
             self.actionButtonBox.pack_start(self.actionButton3, False, False, 0)
             box = Gtk.Box(); box.add(Gtk.Label("Show folders"))
             box.pack_start(self.actionButton4, False, False, 0)
@@ -311,15 +308,20 @@ class MainWindow(Gtk.Window):
             editWindow.set_modal(True) # block the main window until this dialog is dismissed
             editWindow.add_buttons("Apply", Gtk.ResponseType.APPLY, "Cancel", Gtk.ResponseType.CANCEL)
             editWindowBody = editWindow.get_content_area()
-            grid = Gtk.Grid(); editWindowBody.pack_start(grid, True, True, 0)
-            linkTitle = Gtk.Entry(); linkTarget = Gtk.Entry()
-            linkTitle.set_text(selectedLink[0])
-            linkTarget.set_text(selectedLink[1])
-            linkTitleLabel = Gtk.Label("Title: ")
-            grid.add(linkTitleLabel)
-            grid.attach(linkTitle, 1, 0, 5, 1)
-            grid.attach_next_to(Gtk.Label("Target: "), linkTitleLabel, Gtk.PositionType.BOTTOM, 1, 1)
-            grid.attach(linkTarget, 1, 1, 5, 1)
+            editWindowBody.set_orientation(Gtk.Orientation.VERTICAL)
+            box = Gtk.Box(); editWindowBody.pack_start(box, False, False, 0)
+            linkTitle = Gtk.Entry(); linkTitle.set_text(selectedLink[0])
+            box.pack_start(Gtk.Label("Title: "), False, False, 0)
+            box.pack_start(linkTitle, True, True, 0) # True means 'stretch to fill space'
+            box2 = Gtk.Box(); editWindowBody.pack_start(box2, False, False, 0)
+            linkTarget = Gtk.Entry(); linkTarget.set_text(selectedLink[1])
+            linkTarget.set_width_chars(30)
+            # browse button
+            browseButton = Gtk.Button("Browse…")
+            browseButton.connect('clicked', self.browseWindow, linkTarget)
+            box2.pack_start(Gtk.Label("Target: "), False, False, 0)
+            box2.pack_start(linkTarget, True, True, 0)
+            box2.pack_start(browseButton, False, False, 0)
             editWindow.show_all()
             reply = editWindow.run()
             if reply == Gtk.ResponseType.APPLY:
@@ -338,18 +340,17 @@ class MainWindow(Gtk.Window):
             editWindow.destroy()
             self.updateFileListing()
 
-    def linkToAction(self, widget):
-        window = Gtk.FileChooserDialog("Create symlink to...")
+    def browseWindow(self, widget, targetEntry):
+        # lets user pick a file to target
+        window = Gtk.FileChooserDialog("Choose a file…")
         window.set_current_folder(PWD)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
         reply = window.run()
+        returnVal = None
         if reply == Gtk.ResponseType.OK:
-            target = window.get_filename()
-            window.destroy()
-            self.newAction(target=target)
-        else:
-            window.destroy()
+            targetEntry.set_text(window.get_filename())
+        window.destroy()
 
     def newAction(self, widget=None, **kwargs):
         window = Gtk.Dialog(title="Create new symlink")
@@ -367,6 +368,10 @@ class MainWindow(Gtk.Window):
         targetEntryBox = Gtk.Box()
         targetEntryBox.pack_start(Gtk.Label("Target: "), False, False, 0)
         targetEntryBox.pack_start(targetEntry, True, True, 0)
+        # browse button
+        browseButton = Gtk.Button("Browse…")
+        browseButton.connect('clicked', self.browseWindow, targetEntry)
+        targetEntryBox.pack_start(browseButton, False, False, 0)
         windowBody.pack_start(targetEntryBox, False, False, 0)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
@@ -401,7 +406,6 @@ def killme(*args):
     call('pid=$(ps -ef | grep "%s" | grep -v grep | grep -v geany |\
         awk \'{print $2}\') && for i in pid; do kill "$pid"; done' \
         % os.path.realpath(__file__),shell=True)
-
 
 def main():
     global PWD
