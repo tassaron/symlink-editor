@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # created 2017/03/12-14 by tassaron
 # updated 2017/03/17-19
+# updated 2017/03/22
 import argparse
 import os
 from subprocess import call
@@ -12,6 +13,7 @@ from gi.repository import Gtk
 HOME = os.getenv("HOME")
 DEFAULTPATH = '%s/Bookmarks' % HOME
 SRCPATH = ( "%s-src" % os.path.realpath(__file__))
+ENTRYWIDTH = 25
 OSERRORMSG =\
 '''Couldn't complete file operation.
 
@@ -25,7 +27,6 @@ not exist.'''
 # combine all copy-pasted if statements into checkSelectedRow()?
 # fix row getting unselected after each action
 # make killme() unnecessary >.>
-# combine 'link to' and 'new' into one with a browse button
 
 class askWindow(Gtk.Dialog):
     def __init__(self, message):
@@ -120,7 +121,7 @@ class MainWindow(Gtk.Window):
             filetreeWindow.set_border_width(10)
             filetreeWindow.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
             filetreeWindow.add_with_viewport(self.filetree)
-            filetreeWindow.set_size_request(400, 400)
+            filetreeWindow.set_size_request(420, 400)
             # make 'open with file manager' button
             openFmBox = Gtk.Box()
             folderIcon = Gtk.Image(); folderIcon.set_from_file("%s/folderb.png" % SRCPATH)
@@ -306,16 +307,16 @@ class MainWindow(Gtk.Window):
             editWindow.set_border_width(10)
             editWindow.set_transient_for(self)
             editWindow.set_modal(True) # block the main window until this dialog is dismissed
-            editWindow.add_buttons("Apply", Gtk.ResponseType.APPLY, "Cancel", Gtk.ResponseType.CANCEL)
+            editWindow.add_buttons(Gtk.STOCK_APPLY, Gtk.ResponseType.APPLY, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
             editWindowBody = editWindow.get_content_area()
             editWindowBody.set_orientation(Gtk.Orientation.VERTICAL)
             box = Gtk.Box(); editWindowBody.pack_start(box, False, False, 0)
             linkTitle = Gtk.Entry(); linkTitle.set_text(selectedLink[0])
-            box.pack_start(Gtk.Label("Title: "), False, False, 0)
+            box.pack_start(Gtk.Label("Title:   %s/" % PWD), False, False, 0)
             box.pack_start(linkTitle, True, True, 0) # True means 'stretch to fill space'
             box2 = Gtk.Box(); editWindowBody.pack_start(box2, False, False, 0)
             linkTarget = Gtk.Entry(); linkTarget.set_text(selectedLink[1])
-            linkTarget.set_width_chars(30)
+            linkTarget.set_width_chars(ENTRYWIDTH)
             # browse button
             browseButton = Gtk.Button("Browse…")
             browseButton.connect('clicked', self.browseWindow, linkTarget)
@@ -358,7 +359,7 @@ class MainWindow(Gtk.Window):
         windowBody = window.get_content_area()
         windowBody.set_orientation(Gtk.Orientation.VERTICAL)
         titleEntry = Gtk.Entry(); targetEntry = Gtk.Entry()
-        targetEntry.set_width_chars(30)
+        targetEntry.set_width_chars(ENTRYWIDTH)
         if 'target' in kwargs.keys():
             targetEntry.set_text(kwargs['target'])
         titleEntryBox = Gtk.Box()
