@@ -5,9 +5,11 @@ Symlink Editor
 ![Screenshot](/screenshot.png?raw=true)
 ![Screenshot](/screenshot2.png?raw=true)
 
-A GTK+ 3 app that helps you work with symbolic links on Linux.
+A GUI Symlink Editor for Linux. Uses GTK+ 3.
 
 Works with both Python 2.7 and Python 3.4! Probably works with earlier and later versions too but I make no guarantee.
+
+NOTE: The .desktop file in this repo is just a template provided; it must be edited to have a valid filepath to Symlink Editor.
 
 
 Features:
