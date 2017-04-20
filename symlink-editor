@@ -62,8 +62,6 @@ class MainWindow(Gtk.Window):
         self.SHOWHIDDEN=False
         self.closeme=False
 
-        systrayicon = Gtk.StatusIcon()
-
         # do the rest in show_all() in case we never wanna show this window...
 
     def show_all(self, recreate=True):
