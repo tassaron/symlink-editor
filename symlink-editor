@@ -62,6 +62,8 @@ class MainWindow(Gtk.Window):
         self.SHOWHIDDEN=False
         self.closeme=False
 
+        systrayicon = Gtk.StatusIcon()
+
         # do the rest in show_all() in case we never wanna show this window...
 
     def show_all(self, recreate=True):
@@ -72,10 +74,10 @@ class MainWindow(Gtk.Window):
             self.filepathText = Gtk.Entry()
             self.filepathText.set_icon_from_icon_name(Gtk.PositionType.LEFT, 'folder')
             self.filepathText.set_icon_tooltip_text(Gtk.PositionType.LEFT, 'Go up one directory')
-            self.filepathText.connect('icon-press', self.goUpDirectory)
-            self.filepathText.connect('activate', self.changeDirectory)
+            self.filepathText.connect('icon-press', lambda _, __, ___: self.goUpDirectory())
+            self.filepathText.connect('activate', lambda _: self.changeDirectory())
             goButton = Gtk.Button(label="Go")
-            goButton.connect("clicked", self.changeDirectory)
+            goButton.connect("clicked", lambda _: self.changeDirectory())
             navBox = Gtk.Box()
             navBox.pack_start(self.filepathText, True, True, 0)
             navBox.pack_start(goButton, False, False, 0)
@@ -87,22 +89,22 @@ class MainWindow(Gtk.Window):
             arrowIcon = Gtk.Image(); arrowIcon.set_from_file("%s/arrow.png" % SRCPATH)
             self.actionButton1 = Gtk.Button(label="Edit")
             self.actionButton1.set_image(wrenchIcon)
-            self.actionButton1.connect("clicked", self.editAction)
+            self.actionButton1.connect("clicked", lambda _: self.editAction())
             self.actionButton1b = Gtk.Button(label="Copy")
             self.actionButton1b.set_image(notepadIcon)
-            self.actionButton1b.connect("clicked", self.copyAction)
+            self.actionButton1b.connect("clicked", lambda _: self.copyAction())
             self.actionButton1c = Gtk.Button(label=" Move")
             self.actionButton1c.set_image(arrowIcon)
-            self.actionButton1c.connect("clicked", self.moveAction)
+            self.actionButton1c.connect("clicked", lambda _: self.moveAction())
             self.actionButton2 = Gtk.Button(label="New")
             self.actionButton2.set_image(plusIcon)
-            self.actionButton2.connect("clicked", self.newAction)
+            self.actionButton2.connect("clicked", lambda _: self.newAction())
             plusIcon = Gtk.Image(); plusIcon.set_from_file("%s/plus.png" % SRCPATH)
             self.actionButton3 = Gtk.Button(label="Delete")
             self.actionButton3.set_image(minusIcon)
-            self.actionButton3.connect("clicked", self.deleteAction)
+            self.actionButton3.connect("clicked", lambda _: self.deleteAction())
             self.actionButton4 = Gtk.CheckButton()
-            self.actionButton4.connect("toggled",self.toggleShowFolders)
+            self.actionButton4.connect("toggled", lambda _: self.toggleShowFolders())
             # attach paramaters are: col, row, wide, tall
             self.actionButtonBox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             self.actionButtonBox.pack_start(self.actionButton1, False, False, 0)
@@ -116,8 +118,8 @@ class MainWindow(Gtk.Window):
             # then the file listing widgets
             self.filetree = Gtk.ListBox()
             self.filetree.set_activate_on_single_click=False
-            self.filetree.connect("row-selected", self.selectFile)
-            self.filetree.connect("row-activated", self.navigate)
+            self.filetree.connect("row-selected", lambda _, row: self.selectFile(row))
+            self.filetree.connect("row-activated", lambda _, __: self.navigate())
             # make a scrolledwindow for the filetree in case it's long
             filetreeWindow = Gtk.ScrolledWindow()
             filetreeWindow.set_border_width(10)
@@ -129,7 +131,7 @@ class MainWindow(Gtk.Window):
             folderIcon = Gtk.Image(); folderIcon.set_from_file("%s/folderb.png" % SRCPATH)
             openFmButton = Gtk.Button(label="File Manager")
             openFmButton.set_image(folderIcon)
-            openFmButton.connect("clicked", openFm)
+            openFmButton.connect("clicked", lambda _: openFm())
             openFmBox.add(openFmButton)
 
             # place all the freaking widgets
@@ -207,32 +209,32 @@ class MainWindow(Gtk.Window):
             self.rows.append( [False, False] )
         self.show_all(recreate=False)
 
-    def changeDirectory(self, widget):
+    def changeDirectory(self):
         global PWD; PWD = self.filepathText.get_text()
         self.updateFileListing()
 
-    def goUpDirectory(self, widget, idk, idc):
+    def goUpDirectory(self):
         self.filepathText.set_text(os.path.dirname(self.filepathText.get_text()))
-        self.changeDirectory(widget)
+        self.changeDirectory()
 
-    def navigate(self, widget, row):
+    def navigate(self):
         if self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
         if self.selectedRow != -1 and selectedLink[0]!=False and selectedLink[1]==False:
             self.filepathText.set_text('%s/%s' % (PWD, selectedLink[0]))
-            self.changeDirectory(widget)
+            self.changeDirectory()
 
-    def selectFile(self, filelist, row):
+    def selectFile(self, row):
         if row:
             self.selectedRow = row.get_index()
         else:
             self.selectedRow = -1
 
-    def toggleShowFolders(self, widget):
+    def toggleShowFolders(self):
         if self.SHOWFOLDERS == False:
             self.hiddenFolderBox = Gtk.Box(); self.hiddenFolderBox.add(Gtk.Label("Show hidden"))
             self.actionButton5 = Gtk.CheckButton()
-            self.actionButton5.connect("toggled",self.toggleShowHidden)
+            self.actionButton5.connect("toggled", lambda _: self.toggleShowHidden())
             self.hiddenFolderBox.pack_start(self.actionButton5, False, False, 0)
             self.actionButtonBox.pack_start(self.hiddenFolderBox, False, False, 0)
         else:
@@ -241,11 +243,11 @@ class MainWindow(Gtk.Window):
         self.SHOWFOLDERS = not self.SHOWFOLDERS
         self.updateFileListing()
 
-    def toggleShowHidden(self, widget):
+    def toggleShowHidden(self):
         self.SHOWHIDDEN = not self.SHOWHIDDEN
         self.updateFileListing()
 
-    def moveAction(self, widget):
+    def moveAction(self):
         global PWD
         if self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
@@ -280,7 +282,7 @@ class MainWindow(Gtk.Window):
                         oopsWindow(OSERRORMSG)
             window.destroy()
 
-    def copyAction(self, widget):
+    def copyAction(self):
         if self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
         if self.selectedRow != -1 and selectedLink[0]!=False and selectedLink[1]!=False:
@@ -306,9 +308,9 @@ class MainWindow(Gtk.Window):
                 self.updateFileListing()
             window.destroy()
 
-    def editAction(self, widget=None, row=None, **kwargs):
+    def editAction(self, **kwargs):
         selectedLink = (False, False)
-        if 'path' in kwargs.keys():
+        if 'path' in kwargs:
             selectedLink = kwargs['path']
         elif self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
@@ -317,7 +319,7 @@ class MainWindow(Gtk.Window):
             # 1) a message row, 2) a folder row, 3) no row is selected
             editWindow = Gtk.Dialog(title="Edit")
             if self.closeme:
-                editWindow.connect('destroy', killme)
+                editWindow.connect('destroy', lambda _: killme())
             editWindow.set_border_width(10)
             editWindow.set_transient_for(self)
             editWindow.set_modal(True) # block the main window until this dialog is dismissed
@@ -333,7 +335,8 @@ class MainWindow(Gtk.Window):
             linkTarget.set_width_chars(ENTRYWIDTH)
             # browse button
             browseButton = Gtk.Button("Browse…")
-            browseButton.connect('clicked', self.browseWindow, linkTarget)
+            browseButton.connect('clicked',
+                lambda _: self.browseWindow(linkTarget))
             box2.pack_start(Gtk.Label("Target: "), False, False, 0)
             box2.pack_start(linkTarget, True, True, 0)
             box2.pack_start(browseButton, False, False, 0)
@@ -355,26 +358,26 @@ class MainWindow(Gtk.Window):
             editWindow.destroy()
             self.updateFileListing()
 
-    def browseWindow(self, widget, targetEntry):
+    def browseWindow(self, targetEntry):
         # lets user pick a file to target
         window = Gtk.FileChooserDialog("Choose a file…")
         window.set_current_folder(PWD)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
         reply = window.run()
-        returnVal = None
-        if reply == Gtk.ResponseType.OK:
-            targetEntry.set_text(window.get_filename())
+        targetPath = window.get_filename()
+        if reply == Gtk.ResponseType.OK and targetPath:
+            targetEntry.set_text(targetPath)
         window.destroy()
 
-    def newAction(self, widget=None, **kwargs):
+    def newAction(self, **kwargs):
         window = Gtk.Dialog(title="Create new symlink")
         window.set_border_width(10)
         windowBody = window.get_content_area()
         windowBody.set_orientation(Gtk.Orientation.VERTICAL)
         titleEntry = Gtk.Entry(); targetEntry = Gtk.Entry()
         targetEntry.set_width_chars(ENTRYWIDTH)
-        if 'target' in kwargs.keys():
+        if 'target' in kwargs:
             targetEntry.set_text(kwargs['target'])
         titleEntryBox = Gtk.Box()
         titleEntryBox.pack_start(Gtk.Label('Title:   %s/' % PWD), False, False, 0)
@@ -385,13 +388,14 @@ class MainWindow(Gtk.Window):
         targetEntryBox.pack_start(targetEntry, True, True, 0)
         # browse button
         browseButton = Gtk.Button("Browse…")
-        browseButton.connect('clicked', self.browseWindow, targetEntry)
+        browseButton.connect('clicked', lambda _: self.browseWindow(targetEntry))
         targetEntryBox.pack_start(browseButton, False, False, 0)
         windowBody.pack_start(targetEntryBox, False, False, 0)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
         reply = window.run()
-        if reply == Gtk.ResponseType.OK and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
+        if reply == Gtk.ResponseType.OK \
+            and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
             try:
                 os.symlink(targetEntry.get_text(), '%s/%s' % (PWD, titleEntry.get_text()))
             except OSError:
@@ -399,10 +403,11 @@ class MainWindow(Gtk.Window):
         self.updateFileListing()
         window.destroy()
 
-    def deleteAction(self, widget):
+    def deleteAction(self):
         if self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
-        if self.selectedRow != -1 and selectedLink[0]!=False and selectedLink[1]!=False:
+        if self.selectedRow != -1 \
+            and selectedLink[0] != False and selectedLink[1]!=False:
             window = askWindow("Are you sure you want to delete this?")
             window.set_transient_for(self)
             window.set_modal(True)
@@ -415,10 +420,10 @@ class MainWindow(Gtk.Window):
                     oopsWindow(OSERRORMSG)
             window.destroy()
 
-def openFm(*args):
+def openFm():
     call('xdg-open %s' % PWD,shell=True)
 
-def killme(*args):
+def killme():
     # can't seem to find a better way to kill this program...
     # the answer is probably using Gtk.Application but I can't be arsed today
     call('pid=$(ps -ef | grep "%s" | grep -v grep | grep -v geany |\
@@ -443,7 +448,7 @@ def main():
 
 
     window = MainWindow()
-    window.set_icon_from_file("%s/wrench.png" % SRCPATH)
+    window.set_icon_from_file("%s/icon.svg" % SRCPATH)
     window.connect("delete-event", Gtk.main_quit)
 
     if arg['path-to-edit'] and not arg['leaveopen']:
@@ -463,7 +468,7 @@ def main():
             window.editAction(path=(os.path.basename(arg['path-to-edit']), os.readlink(arg['path-to-edit'])))
         else:
             # you mistyped the command or path is not a symlink; show the mainwindow after all!
-            window.closeme=False; window.show_all()
+            window.closeme = False; window.show_all()
             window.updateFileListing()
         if os.path.exists(arg['path-to-edit']) and not arg['leaveopen']:
             # if a non-symlink is opened, make a new link to it as target
