@@ -62,6 +62,8 @@ class MainWindow(Gtk.Window):
         self.SHOWHIDDEN=False
         self.closeme=False
 
+        systrayicon = Gtk.StatusIcon()
+
         # do the rest in show_all() in case we never wanna show this window...
 
     def show_all(self, recreate=True):
@@ -307,6 +309,7 @@ class MainWindow(Gtk.Window):
             window.destroy()
 
     def editAction(self, **kwargs):
+        # ALLOW EDITING WHOLW PATH BUT SELECT THE NAME PART FOR EASY EDITING
         selectedLink = (False, False)
         if 'path' in kwargs:
             selectedLink = kwargs['path']
@@ -320,13 +323,16 @@ class MainWindow(Gtk.Window):
                 editWindow.connect('destroy', lambda _: killme())
             editWindow.set_border_width(10)
             editWindow.set_transient_for(self)
-            editWindow.set_modal(True) # block the main window until this dialog is dismissed
-            editWindow.add_buttons(Gtk.STOCK_APPLY, Gtk.ResponseType.APPLY, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+            # block the main window until this dialog is dismissed
+            editWindow.set_modal(True)
+            editWindow.add_buttons(Gtk.STOCK_APPLY,  Gtk.ResponseType.APPLY,
+                                   Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
             editWindowBody = editWindow.get_content_area()
             editWindowBody.set_orientation(Gtk.Orientation.VERTICAL)
             box = Gtk.Box(); editWindowBody.pack_start(box, False, False, 0)
-            linkTitle = Gtk.Entry(); linkTitle.set_text(selectedLink[0])
-            box.pack_start(Gtk.Label("Title:   %s/" % PWD), False, False, 0)
+            larbel = '%s/%s' % (PWD, selectedLink[0])
+            linkTitle = Gtk.Entry(); linkTitle.set_text(larbel)
+            box.pack_start(Gtk.Label("Title:  "), False, False, 0)
             box.pack_start(linkTitle, True, True, 0) # True means 'stretch to fill space'
             box2 = Gtk.Box(); editWindowBody.pack_start(box2, False, False, 0)
             linkTarget = Gtk.Entry(); linkTarget.set_text(selectedLink[1])
@@ -338,6 +344,8 @@ class MainWindow(Gtk.Window):
             box2.pack_start(Gtk.Label("Target: "), False, False, 0)
             box2.pack_start(linkTarget, True, True, 0)
             box2.pack_start(browseButton, False, False, 0)
+            linkTitle.grab_focus()
+            linkTitle.select_region(len(larbel) - len(selectedLink[0]), len(larbel))
             editWindow.show_all()
             reply = editWindow.run()
             if reply == Gtk.ResponseType.APPLY:
@@ -348,9 +356,9 @@ class MainWindow(Gtk.Window):
                         # if target changed, use 'os.symlink'
                         os.remove('%s/%s' % (PWD, selectedLink[0]))
                         os.symlink(linkTargetText, '%s/%s' % (PWD, linkTitleText))
-                    elif linkTitleText != selectedLink[0]:
+                    elif linkTitleText != larbel:
                         # otherwise just title change can be accomplished via os.rename
-                        os.rename('%s/%s' % (PWD, selectedLink[0]), '%s/%s' % (PWD, linkTitleText))
+                        os.rename(larbel, linkTitleText)
                 except OSError:
                     oopsWindow(OSERRORMSG)
             editWindow.destroy()
@@ -374,11 +382,12 @@ class MainWindow(Gtk.Window):
         windowBody = window.get_content_area()
         windowBody.set_orientation(Gtk.Orientation.VERTICAL)
         titleEntry = Gtk.Entry(); targetEntry = Gtk.Entry()
+        titleEntry.set_text('%s/' % PWD)
         targetEntry.set_width_chars(ENTRYWIDTH)
         if 'target' in kwargs:
             targetEntry.set_text(kwargs['target'])
         titleEntryBox = Gtk.Box()
-        titleEntryBox.pack_start(Gtk.Label('Title:   %s/' % PWD), False, False, 0)
+        titleEntryBox.pack_start(Gtk.Label('Title: '), False, False, 0)
         titleEntryBox.pack_start(titleEntry, True, True, 0)
         windowBody.pack_start(titleEntryBox, False, False, 0)
         targetEntryBox = Gtk.Box()
@@ -390,12 +399,14 @@ class MainWindow(Gtk.Window):
         targetEntryBox.pack_start(browseButton, False, False, 0)
         windowBody.pack_start(targetEntryBox, False, False, 0)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+        titleEntry.grab_focus()
+        titleEntry.select_region(-1, -1)
         window.show_all()
         reply = window.run()
         if reply == Gtk.ResponseType.OK \
             and len(targetEntry.get_text())>0 and len(titleEntry.get_text())>0:
             try:
-                os.symlink(targetEntry.get_text(), '%s/%s' % (PWD, titleEntry.get_text()))
+                os.symlink(targetEntry.get_text(), titleEntry.get_text())
             except OSError:
                 oopsWindow(OSERRORMSG)
         self.updateFileListing()
