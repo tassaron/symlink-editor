@@ -62,8 +62,6 @@ class MainWindow(Gtk.Window):
         self.SHOWHIDDEN=False
         self.closeme=False
 
-        systrayicon = Gtk.StatusIcon()
-
         # do the rest in show_all() in case we never wanna show this window...
 
     def show_all(self, recreate=True):
@@ -115,6 +113,16 @@ class MainWindow(Gtk.Window):
             box = Gtk.Box(); box.add(Gtk.Label("Show folders"))
             box.pack_start(self.actionButton4, False, False, 0)
             self.actionButtonBox.pack_start(box, False, False, 0)
+            # add exclamation point for superuser
+            if os.getenv("USER") == 'root':
+                box = Gtk.Box()
+                exclamIcon = Gtk.Image()
+                exclamIcon.set_from_file('%s/caution.png' % SRCPATH)
+                lrabel = Gtk.Label()
+                lrabel.set_markup("<b> Superuser</b>")
+                box.pack_start(exclamIcon, False, False, 0)
+                box.pack_start(lrabel, False, False, 0)
+                self.actionButtonBox.pack_start(box, False, False, 0)
             # then the file listing widgets
             self.filetree = Gtk.ListBox()
             self.filetree.set_activate_on_single_click=False
@@ -309,7 +317,6 @@ class MainWindow(Gtk.Window):
             window.destroy()
 
     def editAction(self, **kwargs):
-        # ALLOW EDITING WHOLW PATH BUT SELECT THE NAME PART FOR EASY EDITING
         selectedLink = (False, False)
         if 'path' in kwargs:
             selectedLink = kwargs['path']
@@ -416,7 +423,7 @@ class MainWindow(Gtk.Window):
         if self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
         if self.selectedRow != -1 \
-            and selectedLink[0] != False and selectedLink[1]!=False:
+            and selectedLink[0] != False and selectedLink[1] != False:
             window = askWindow("Are you sure you want to delete this?")
             window.set_transient_for(self)
             window.set_modal(True)
