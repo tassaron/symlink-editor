@@ -1,8 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+'''
+A graphical symlink editor using GTK+ 3, compatible with Python 2 and 3
+For commandline options try 'symlink-editor --help'
+'''
+#=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
+# Copyright (C) 2017 Brianna Rainey
+#
+# Symlink Editor is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program, in a file named "COPYING".  If not, see
+# <http://www.gnu.org/licenses/>
+#
+#=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
 # created 2017/03/12-14 by tassaron
-# updated 2017/03/17-19
-# updated 2017/03/22
+# updated 2017/03/17-19,22
+# updated 2017/04/30
+#
+#=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
+
 import argparse
 import os
 import stat
@@ -29,6 +54,7 @@ not exist.'''
 # combine all copy-pasted if statements into checkSelectedRow()?
 # fix row getting unselected after each action
 # make killme() unnecessary >.>
+# make code readable by mortal eyes
 
 class askWindow(Gtk.Dialog):
     def __init__(self, message):
@@ -114,15 +140,14 @@ class MainWindow(Gtk.Window):
             box.pack_start(self.actionButton4, False, False, 0)
             self.actionButtonBox.pack_start(box, False, False, 0)
             # add exclamation point for superuser
+            superuserBox = Gtk.Box()
             if os.getenv("USER") == 'root':
-                box = Gtk.Box()
                 exclamIcon = Gtk.Image()
                 exclamIcon.set_from_file('%s/caution.png' % SRCPATH)
                 lrabel = Gtk.Label()
                 lrabel.set_markup("<b> Superuser</b>")
-                box.pack_start(exclamIcon, False, False, 0)
-                box.pack_start(lrabel, False, False, 0)
-                self.actionButtonBox.pack_start(box, False, False, 0)
+                superuserBox.pack_start(exclamIcon, False, False, 0)
+                superuserBox.pack_start(lrabel, False, False, 0)
             # then the file listing widgets
             self.filetree = Gtk.ListBox()
             self.filetree.set_activate_on_single_click=False
@@ -136,7 +161,8 @@ class MainWindow(Gtk.Window):
             filetreeWindow.set_size_request(420, 400)
             # make 'open with file manager' button
             openFmBox = Gtk.Box()
-            folderIcon = Gtk.Image(); folderIcon.set_from_file("%s/folderb.png" % SRCPATH)
+            folderIcon = Gtk.Image()
+            folderIcon.set_from_file("%s/folderb.png" % SRCPATH)
             openFmButton = Gtk.Button(label="File Manager")
             openFmButton.set_image(folderIcon)
             openFmButton.connect("clicked", lambda _: openFm())
@@ -148,7 +174,10 @@ class MainWindow(Gtk.Window):
             self.bodyGrid.add(openFmBox)
             self.bodyGrid.attach(self.actionButtonBox, 0, 1, 1, 1) # action buttons
             self.bodyGrid.attach(navBox, 1, 0, 1, 1) # col, row, width, height
-            self.bodyGrid.attach_next_to(filetreeWindow, navBox, Gtk.PositionType.BOTTOM, 1, 1)
+            self.bodyGrid.attach_next_to(filetreeWindow, navBox,
+                Gtk.PositionType.BOTTOM, 1, 1)
+            self.bodyGrid.attach_next_to(superuserBox, self.actionButtonBox,
+                Gtk.PositionType.BOTTOM, 1, 1)
         else:
             # call dad's method to show the contents
             Gtk.Window.show_all(self)
@@ -228,7 +257,7 @@ class MainWindow(Gtk.Window):
     def navigate(self):
         if self.selectedRow != -1:
             selectedLink = self.rows[self.selectedRow]
-        if self.selectedRow != -1 and selectedLink[0]!=False and selectedLink[1]==False:
+        if self.selectedRow != -1 and selectedLink[0] != False and selectedLink[1] == False:
             self.filepathText.set_text('%s/%s' % (PWD, selectedLink[0]))
             self.changeDirectory()
 
@@ -337,7 +366,7 @@ class MainWindow(Gtk.Window):
             editWindowBody = editWindow.get_content_area()
             editWindowBody.set_orientation(Gtk.Orientation.VERTICAL)
             box = Gtk.Box(); editWindowBody.pack_start(box, False, False, 0)
-            larbel = '%s/%s' % (PWD, selectedLink[0])
+            larbel = os.path.join(PWD, selectedLink[0])
             linkTitle = Gtk.Entry(); linkTitle.set_text(larbel)
             box.pack_start(Gtk.Label("Title:  "), False, False, 0)
             box.pack_start(linkTitle, True, True, 0) # True means 'stretch to fill space'
@@ -352,7 +381,8 @@ class MainWindow(Gtk.Window):
             box2.pack_start(linkTarget, True, True, 0)
             box2.pack_start(browseButton, False, False, 0)
             linkTitle.grab_focus()
-            linkTitle.select_region(len(larbel) - len(selectedLink[0]), len(larbel))
+            # select name of symlink (skip trailing '/' if PWD is not root)
+            linkTitle.select_region(len(PWD) + (PWD != '/'), -1)
             editWindow.show_all()
             reply = editWindow.run()
             if reply == Gtk.ResponseType.APPLY:
@@ -389,7 +419,11 @@ class MainWindow(Gtk.Window):
         windowBody = window.get_content_area()
         windowBody.set_orientation(Gtk.Orientation.VERTICAL)
         titleEntry = Gtk.Entry(); targetEntry = Gtk.Entry()
-        titleEntry.set_text('%s/' % PWD)
+        if PWD == '/':
+            label = PWD
+        else:
+            label = '%s/' % PWD
+        titleEntry.set_text(label)
         targetEntry.set_width_chars(ENTRYWIDTH)
         if 'target' in kwargs:
             targetEntry.set_text(kwargs['target'])
