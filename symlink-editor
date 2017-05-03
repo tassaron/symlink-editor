@@ -23,8 +23,7 @@ For commandline options try 'symlink-editor --help'
 #
 #=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
 # created 2017/03/12-14 by tassaron
-# updated 2017/03/17-19,22
-# updated 2017/04/30
+# updated 2017/03/17-19,22 : 04/30 : 05/02
 #
 #=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
 
@@ -50,11 +49,11 @@ were editing it, or the path contains a directory that does
 not exist.'''
 
 # TODO:
-# create own masks for os module to reduce repetitious strings
-# combine all copy-pasted if statements into checkSelectedRow()?
+# give more specific OS error messages
 # fix row getting unselected after each action
 # make killme() unnecessary >.>
 # make code readable by mortal eyes
+# ability to escalate permission would be nice
 
 class askWindow(Gtk.Dialog):
     def __init__(self, message):
@@ -62,7 +61,8 @@ class askWindow(Gtk.Dialog):
         self.set_border_width(10)
         windowBody = self.get_content_area()
         windowBody.add(Gtk.Label(message))
-        self.add_buttons(Gtk.STOCK_YES, Gtk.ResponseType.YES, Gtk.STOCK_NO, Gtk.ResponseType.NO)
+        self.add_buttons(Gtk.STOCK_YES, Gtk.ResponseType.YES,
+            Gtk.STOCK_NO, Gtk.ResponseType.NO)
         self.show_all()
 
 class oopsWindow(Gtk.Dialog):
@@ -386,18 +386,30 @@ class MainWindow(Gtk.Window):
             editWindow.show_all()
             reply = editWindow.run()
             if reply == Gtk.ResponseType.APPLY:
-                try:
-                    linkTargetText = linkTarget.get_text()
-                    linkTitleText = linkTitle.get_text()
-                    if linkTargetText != selectedLink[1]:
-                        # if target changed, use 'os.symlink'
-                        os.remove('%s/%s' % (PWD, selectedLink[0]))
+                linkTargetText = linkTarget.get_text()
+                linkTitleText = linkTitle.get_text()
+                if linkTargetText != selectedLink[1]:
+                    # if target changed, use 'os.symlink'
+                    source = '%s/%s' % (PWD, selectedLink[0])
+                    destination = '%s/gfhjkl%s' % (SRCPATH, selectedLink[0])
+                    # first make a copy in case there's a problem
+                    os.rename(source, destination)
+                    try:
                         os.symlink(linkTargetText, '%s/%s' % (PWD, linkTitleText))
-                    elif linkTitleText != larbel:
-                        # otherwise just title change can be accomplished via os.rename
+                    except OSError:
+                        # undelete original file by moving tempfile copy
+                        if not os.path.exists(source):
+                            os.rename(destination, source)
+                        oopsWindow(OSERRORMSG)
+                    else:
+                        # remove tempfile because everything went hunky-dory
+                        os.remove(destination)
+                elif linkTitleText != larbel:
+                    # otherwise just use os.rename
+                    try:
                         os.rename(larbel, linkTitleText)
-                except OSError:
-                    oopsWindow(OSERRORMSG)
+                    except OSError:
+                        oopsWindow(OSERRORMSG)
             editWindow.destroy()
             self.updateFileListing()
 
