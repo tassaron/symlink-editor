@@ -23,17 +23,23 @@ For commandline options try 'symlink-editor --help'
 #
 #=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
 # created 2017/03/12-14 by tassaron
-# updated 2017/03/17-19,22 : 04/30 : 05/02
+# updated 2017/03/17-19,22 : 04/30 : 05/02 : 05/14
 #
 #=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
 
 import argparse
 import os
 import stat
+import signal
+from tempfile import gettempdir
 from subprocess import call
-import gi
-gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+try:
+    import gi
+    gi.require_version('Gtk', '3.0')
+    from gi.repository import Gtk
+except:
+    print 'You need to install gtk3.0'
+    quit(1)
 
 HOME = os.getenv("HOME")
 DEFAULTPATH = '%s/Bookmarks' % HOME
@@ -51,7 +57,6 @@ not exist.'''
 # TODO:
 # give more specific OS error messages
 # fix row getting unselected after each action
-# make killme() unnecessary >.>
 # make code readable by mortal eyes
 # ability to escalate permission would be nice
 
@@ -356,7 +361,7 @@ class MainWindow(Gtk.Window):
             # 1) a message row, 2) a folder row, 3) no row is selected
             editWindow = Gtk.Dialog(title="Edit")
             if self.closeme:
-                editWindow.connect('destroy', lambda _: killme())
+                editWindow.connect('destroy', lambda _: Gtk.main_quit())
             editWindow.set_border_width(10)
             editWindow.set_transient_for(self)
             # block the main window until this dialog is dismissed
@@ -485,13 +490,6 @@ class MainWindow(Gtk.Window):
 def openFm():
     call('xdg-open %s' % PWD,shell=True)
 
-def killme():
-    # can't seem to find a better way to kill this program...
-    # the answer is probably using Gtk.Application but I can't be arsed today
-    call('pid=$(ps -ef | grep "%s" | grep -v grep | grep -v geany |\
-        awk \'{print $2}\') && for i in pid; do kill "$pid"; done' \
-        % os.path.realpath(__file__),shell=True)
-
 def main():
     global PWD
     # first parse command line arguments
@@ -539,7 +537,7 @@ def main():
         window.newAction()
     else:
         window.updateFileListing()
-
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     Gtk.main()
 
 if __name__ == "__main__":
