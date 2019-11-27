@@ -361,7 +361,7 @@ class MainWindow(Gtk.Window):
             # 1) a message row, 2) a folder row, 3) no row is selected
             editWindow = Gtk.Dialog(title="Edit")
             if self.closeme:
-                editWindow.connect('destroy', lambda _: Gtk.main_quit())
+                editWindow.connect('destroy', lambda _: quit())
             editWindow.set_border_width(10)
             editWindow.set_transient_for(self)
             # block the main window until this dialog is dismissed
@@ -400,7 +400,7 @@ class MainWindow(Gtk.Window):
                     # first make a copy in case there's a problem
                     os.rename(source, destination)
                     try:
-                        os.symlink(linkTargetText, '%s/%s' % (PWD, linkTitleText))
+                        os.symlink(linkTargetText, linkTitleText)
                     except OSError:
                         # undelete original file by moving tempfile copy
                         if not os.path.exists(source):
@@ -416,7 +416,8 @@ class MainWindow(Gtk.Window):
                     except OSError:
                         oopsWindow(OSERRORMSG)
             editWindow.destroy()
-            self.updateFileListing()
+            if not self.closeme:
+                self.updateFileListing()
 
     def browseWindow(self, targetEntry):
         # lets user pick a file to target
@@ -467,7 +468,8 @@ class MainWindow(Gtk.Window):
                 os.symlink(targetEntry.get_text(), titleEntry.get_text())
             except OSError:
                 oopsWindow(OSERRORMSG)
-        self.updateFileListing()
+        if not self.closeme:
+            self.updateFileListing()
         window.destroy()
 
     def deleteAction(self):
@@ -526,13 +528,14 @@ def main():
             PWD = os.getcwd()
         if os.path.islink(arg['path-to-edit']):
             window.editAction(path=(os.path.basename(arg['path-to-edit']), os.readlink(arg['path-to-edit'])))
-        else:
-            # you mistyped the command or path is not a symlink; show the mainwindow after all!
-            window.closeme = False; window.show_all()
-            window.updateFileListing()
-        if os.path.exists(arg['path-to-edit']) and not arg['leaveopen']:
+        elif os.path.exists(arg['path-to-edit']) and not arg['leaveopen']:
             # if a non-symlink is opened, make a new link to it as target
             window.newAction(target=arg['path-to-edit'])
+        else:
+            # you mistyped the command or path is not a symlink; show the mainwindow after all!
+            window.closeme = False
+            window.show_all()
+            window.updateFileListing()
     elif arg['new']:
         window.newAction()
     else:
