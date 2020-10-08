@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 '''
-A graphical symlink editor using GTK+ 3, compatible with Python 2 and 3
+A graphical symlink editor using GTK+ 3 and Python 3
 For commandline options try 'symlink-editor --help'
 '''
 #=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
@@ -22,10 +21,6 @@ For commandline options try 'symlink-editor --help'
 # <http://www.gnu.org/licenses/>
 #
 #=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
-# created 2017/03/12-14 by tassaron
-# updated 2017/03/17-19,22 : 04/30 : 05/02 : 05/14
-#
-#=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~==~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~#
 
 import argparse
 import os
@@ -37,8 +32,8 @@ try:
     import gi
     gi.require_version('Gtk', '3.0')
     from gi.repository import Gtk
-except:
-    print 'You need to install gtk3.0'
+except ModuleNotFoundError:
+    print('You need to install python3 gtk3 bindings (python3-gi)')
     quit(1)
 
 HOME = os.getenv("HOME")
@@ -65,7 +60,7 @@ class askWindow(Gtk.Dialog):
         Gtk.Dialog.__init__(self, title="?")
         self.set_border_width(10)
         windowBody = self.get_content_area()
-        windowBody.add(Gtk.Label(message))
+        windowBody.add(Gtk.Label(label=message))
         self.add_buttons(Gtk.STOCK_YES, Gtk.ResponseType.YES,
             Gtk.STOCK_NO, Gtk.ResponseType.NO)
         self.show_all()
@@ -75,7 +70,7 @@ class oopsWindow(Gtk.Dialog):
         Gtk.Dialog.__init__(self, title="Oops")
         self.set_border_width(10)
         myBody = self.get_content_area()
-        myBody.add(Gtk.Label(message))
+        myBody.add(Gtk.Label(label=message))
         self.add_button(Gtk.STOCK_OK, Gtk.ResponseType.OK)
         self.show_all()
         self.run()
@@ -141,7 +136,7 @@ class MainWindow(Gtk.Window):
             self.actionButtonBox.pack_start(self.actionButton1c, False, False, 0)
             self.actionButtonBox.pack_start(self.actionButton2, False, False, 0)
             self.actionButtonBox.pack_start(self.actionButton3, False, False, 0)
-            box = Gtk.Box(); box.add(Gtk.Label("Show folders"))
+            box = Gtk.Box(); box.add(Gtk.Label(label="Show folders"))
             box.pack_start(self.actionButton4, False, False, 0)
             self.actionButtonBox.pack_start(box, False, False, 0)
             # add exclamation point for superuser
@@ -162,7 +157,7 @@ class MainWindow(Gtk.Window):
             filetreeWindow = Gtk.ScrolledWindow()
             filetreeWindow.set_border_width(10)
             filetreeWindow.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-            filetreeWindow.add_with_viewport(self.filetree)
+            filetreeWindow.add(self.filetree)
             filetreeWindow.set_size_request(420, 400)
             # make 'open with file manager' button
             openFmBox = Gtk.Box()
@@ -222,7 +217,7 @@ class MainWindow(Gtk.Window):
                     folderIcon = Gtk.Image()
                     folderIcon.set_from_file(FOLDER)
                     rowBody.pack_start(folderIcon, False, False, 0)
-                    rowBody.pack_start(Gtk.Label(" %s" % ifile), False, False, 0)
+                    rowBody.pack_start(Gtk.Label(label=" %s" % ifile), False, False, 0)
                     newRow.add(rowBody)
                     self.filetree.add(newRow)
             # show symlinks
@@ -244,10 +239,10 @@ class MainWindow(Gtk.Window):
             # if there are no folders this prevents the filetree being totally empty
             totalLinks = len(symlinks)
             if totalLinks==0:
-                self.filetree.add(Gtk.Label("No links here :("))
+                self.filetree.add(Gtk.Label(label="No links here :("))
                 self.rows.append( [False, False] )
         except OSError:
-            self.filetree.add(Gtk.Label("File doesn't exist (check permissions?)"))
+            self.filetree.add(Gtk.Label(label="File doesn't exist (check permissions?)"))
             self.rows.append( [False, False] )
         self.show_all(recreate=False)
 
@@ -274,7 +269,7 @@ class MainWindow(Gtk.Window):
 
     def toggleShowFolders(self):
         if self.SHOWFOLDERS == False:
-            self.hiddenFolderBox = Gtk.Box(); self.hiddenFolderBox.add(Gtk.Label("Show hidden"))
+            self.hiddenFolderBox = Gtk.Box(); self.hiddenFolderBox.add(Gtk.Label(label="Show hidden"))
             self.actionButton5 = Gtk.CheckButton()
             self.actionButton5.connect("toggled", lambda _: self.toggleShowHidden())
             self.hiddenFolderBox.pack_start(self.actionButton5, False, False, 0)
@@ -301,11 +296,11 @@ class MainWindow(Gtk.Window):
             window.set_modal(True)
             window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
             windowBody = window.get_content_area(); windowBody.set_orientation(Gtk.Orientation.VERTICAL)
-            windowBody.pack_start(Gtk.Label("Enter a new path for this file:"), False, False, 0)
+            windowBody.pack_start(Gtk.Label(label="Enter a new path for this file:"), False, False, 0)
             otherBox = Gtk.Box(); pathEntry = Gtk.Entry()
             pathEntry.set_text(PWD)
             otherBox.pack_start(pathEntry, True, True, 0)
-            otherBox.pack_start(Gtk.Label("/%s" % selectedLink[0]), False, False, 0)
+            otherBox.pack_start(Gtk.Label(label="/%s" % selectedLink[0]), False, False, 0)
             windowBody.pack_start(otherBox, False, False, 0)
             window.show_all()
             reply = window.run()
@@ -336,7 +331,7 @@ class MainWindow(Gtk.Window):
             windowBody.set_orientation(Gtk.Orientation.VERTICAL)
             titleEntry = Gtk.Entry()
             titleEntry.set_text(selectedLink[0])
-            windowBody.pack_start(Gtk.Label("Enter a new name for the copy"), False, False, 0)
+            windowBody.pack_start(Gtk.Label(label="Enter a new name for the copy"), False, False, 0)
             windowBody.pack_start(titleEntry, False, False, 0)
             window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
             window.show_all()
@@ -373,16 +368,16 @@ class MainWindow(Gtk.Window):
             box = Gtk.Box(); editWindowBody.pack_start(box, False, False, 0)
             larbel = os.path.join(PWD, selectedLink[0])
             linkTitle = Gtk.Entry(); linkTitle.set_text(larbel)
-            box.pack_start(Gtk.Label("Title:  "), False, False, 0)
+            box.pack_start(Gtk.Label(label="Title:  "), False, False, 0)
             box.pack_start(linkTitle, True, True, 0) # True means 'stretch to fill space'
             box2 = Gtk.Box(); editWindowBody.pack_start(box2, False, False, 0)
             linkTarget = Gtk.Entry(); linkTarget.set_text(selectedLink[1])
             linkTarget.set_width_chars(ENTRYWIDTH)
             # browse button
-            browseButton = Gtk.Button("Browse…")
+            browseButton = Gtk.Button(label="Browse…")
             browseButton.connect('clicked',
                 lambda _: self.browseWindow(linkTarget))
-            box2.pack_start(Gtk.Label("Target: "), False, False, 0)
+            box2.pack_start(Gtk.Label(label="Target: "), False, False, 0)
             box2.pack_start(linkTarget, True, True, 0)
             box2.pack_start(browseButton, False, False, 0)
             linkTitle.grab_focus()
@@ -421,7 +416,7 @@ class MainWindow(Gtk.Window):
 
     def browseWindow(self, targetEntry):
         # lets user pick a file to target
-        window = Gtk.FileChooserDialog("Choose a file…")
+        window = Gtk.FileChooserDialog(title="Choose a file…")
         window.set_current_folder(PWD)
         window.add_buttons(Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
         window.show_all()
@@ -446,14 +441,14 @@ class MainWindow(Gtk.Window):
         if 'target' in kwargs:
             targetEntry.set_text(kwargs['target'])
         titleEntryBox = Gtk.Box()
-        titleEntryBox.pack_start(Gtk.Label('Title: '), False, False, 0)
+        titleEntryBox.pack_start(Gtk.Label(label='Title: '), False, False, 0)
         titleEntryBox.pack_start(titleEntry, True, True, 0)
         windowBody.pack_start(titleEntryBox, False, False, 0)
         targetEntryBox = Gtk.Box()
-        targetEntryBox.pack_start(Gtk.Label("Target: "), False, False, 0)
+        targetEntryBox.pack_start(Gtk.Label(label="Target: "), False, False, 0)
         targetEntryBox.pack_start(targetEntry, True, True, 0)
         # browse button
-        browseButton = Gtk.Button("Browse…")
+        browseButton = Gtk.Button(label="Browse…")
         browseButton.connect('clicked', lambda _: self.browseWindow(targetEntry))
         targetEntryBox.pack_start(browseButton, False, False, 0)
         windowBody.pack_start(targetEntryBox, False, False, 0)
