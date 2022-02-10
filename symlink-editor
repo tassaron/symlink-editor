@@ -93,6 +93,7 @@ class MainWindow(Gtk.Window):
     def show_all(self, recreate=True):
         if recreate:
             # create the mainwindow
+            self.set_size_request(640, 480)
             self.set_border_width(10)
             # make navigation widgets
             self.filepathText = Gtk.Entry()
@@ -140,7 +141,7 @@ class MainWindow(Gtk.Window):
             box.pack_start(self.actionButton4, False, False, 0)
             self.actionButtonBox.pack_start(box, False, False, 0)
             # add exclamation point for superuser
-            superuserBox = Gtk.Box()
+            superuserBox = Gtk.Box(expand=True)
             if os.getenv("USER") == 'root':
                 exclamIcon = Gtk.Image()
                 exclamIcon.set_from_file('%s/caution.png' % SRCPATH)
@@ -149,7 +150,7 @@ class MainWindow(Gtk.Window):
                 superuserBox.pack_start(exclamIcon, False, False, 0)
                 superuserBox.pack_start(lrabel, False, False, 0)
             # then the file listing widgets
-            self.filetree = Gtk.ListBox()
+            self.filetree = Gtk.ListBox(expand=True)
             self.filetree.set_activate_on_single_click=False
             self.filetree.connect("row-selected", lambda _, row: self.selectFile(row))
             self.filetree.connect("row-activated", lambda _, __: self.navigate())
@@ -158,7 +159,6 @@ class MainWindow(Gtk.Window):
             filetreeWindow.set_border_width(10)
             filetreeWindow.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
             filetreeWindow.add(self.filetree)
-            filetreeWindow.set_size_request(420, 400)
             # make 'open with file manager' button
             openFmBox = Gtk.Box()
             folderIcon = Gtk.Image()
@@ -166,18 +166,18 @@ class MainWindow(Gtk.Window):
             openFmButton = Gtk.Button(label="File Manager")
             openFmButton.set_image(folderIcon)
             openFmButton.connect("clicked", lambda _: openFm())
-            openFmBox.add(openFmButton)
+            openFmBox.pack_start(openFmButton, True, True, 0)
 
             # place all the freaking widgets
             self.bodyGrid = Gtk.Grid()
             self.add(self.bodyGrid)
             self.bodyGrid.add(openFmBox)
             self.bodyGrid.attach(self.actionButtonBox, 0, 1, 1, 1) # action buttons
-            self.bodyGrid.attach(navBox, 1, 0, 1, 1) # col, row, width, height
+            self.bodyGrid.attach(navBox, 1, 0, 4, 1) # col, row, width, height
             self.bodyGrid.attach_next_to(filetreeWindow, navBox,
-                Gtk.PositionType.BOTTOM, 1, 1)
+                Gtk.PositionType.BOTTOM, 6, 8)
             self.bodyGrid.attach_next_to(superuserBox, self.actionButtonBox,
-                Gtk.PositionType.BOTTOM, 1, 1)
+                Gtk.PositionType.BOTTOM, 1, 3)
         else:
             # call dad's method to show the contents
             Gtk.Window.show_all(self)
