@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Symlink Editor
-Exec=/home/user/bin/symlink-editor
-Icon=/home/user/bin/symlink-editor-src/icon.svg
+Exec=$HOME/bin/symlink-editor
+Icon=$HOME/bin/symlink-editor-src/icon.svg
 Terminal=false
 Type=Application
 StartupNotify=true
